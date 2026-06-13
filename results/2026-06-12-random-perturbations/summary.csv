@@ -1,0 +1,4 @@
+condition,file,episodes,avg_return,avg_cost,avg_true_cost,avg_exposed_cost,violation_rate,avg_steps
+clean,random_clean.csv,20,0.11862745117235891,35.3,35.3,35.3,0.2,1000.0
+lidar_blind,random_lidar_blind.csv,20,0.11862745117235891,35.3,35.3,35.3,0.2,1000.0
+cost_under,random_cost_under.csv,20,0.11862745117235891,8.825,35.3,8.825,0.2,1000.0

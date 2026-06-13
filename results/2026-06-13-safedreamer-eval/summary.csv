@@ -1,0 +1,4 @@
+condition,file,episodes,avg_return,avg_cost,avg_true_cost,avg_exposed_cost,violation_rate,avg_steps
+clean,random_clean.csv,20,0.11862745117235891,35.3,35.3,35.3,0.2,1000.0
+ppo_reward_only_100k_eval,ppo_reward_only_100k_eval.csv,20,19.736533527810813,84.3,84.3,84.3,1.0,1000.0
+safedreamer_clean,safedreamer_clean.csv,2,6.279988355707245,0.0,0.0,0.0,0.0,200.0

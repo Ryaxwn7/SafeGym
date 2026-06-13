@@ -1,0 +1,43 @@
+# Python caches
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Local environments and caches
+.venv/
+venv/
+env/
+.matplotlib-cache/
+.cache/
+
+# Large archives and model/checkpoint artifacts
+*.zip
+*.ckpt
+*.checkpoint
+external/checkpoints/
+models/
+main.zip
+
+# Local upstream dependency checkout; install with pip instead
+safety-gymnasium-main/
+
+# Generated media and heavy SafeDreamer reports
+figures/replays/*.gif
+figures/replays/*.mp4
+results/**/groundtruth_video*.mp4
+results/**/obs_*.png
+results/**/obs_mean*.png
+results/**/obs_min*.png
+results/**/cost*.png
+
+# TensorBoard/logging artifacts
+events.out.tfevents*
+results/**/tb/
+external/SafeDreamer/logdir/
+
+# OS/editor noise
+.DS_Store
+.vscode/
