@@ -1,34 +1,88 @@
-# SafeGym Reliability Experiments
+# SafeDreamer Attack Robustness Experiments
 
-本仓库是课程小组项目工作空间，用于研究 Safety-Gymnasium 中强化学习策略的安全可靠性。当前阶段聚焦 `SafetyPointGoal1-v0`：比较随机策略、PPO 策略和现有 SafeDreamer 世界模型策略在任务收益和真实安全代价上的差异。
+本仓库是课程小组项目工作空间，用于评估 SafeDreamer 世界模型策略在 Safety-Gymnasium 安全任务中的攻击鲁棒性。核心问题是：当机器人策略依赖世界模型和安全代价预测时，观测被遮蔽、危险信息缺失或 cost 信号被低估，会不会导致策略低估真实风险。
 
-## 项目目的
+当前环境聚焦 `SafetyPointGoal1-v0`。Safety-Gymnasium 提供真实仿真环境和 ground-truth safety cost，SafeDreamer 提供 world-model-based policy/planning 方法。
 
-Safety-Gymnasium 的 `step()` 返回 6 个值：
+## 研究目标
+
+Safety-Gymnasium 的 step API 为：
 
 ```python
 obs, reward, cost, terminated, truncated, info = env.step(action)
 ```
 
-其中 `cost` 是真实安全代价，也是本项目的核心评价指标。项目目标不是只追求更高 reward，而是验证策略在提高任务表现时是否会增加安全违规，并进一步测试世界模型方法是否能改善安全性。
+其中 `cost` 是真实安全代价，也是本项目主指标。项目重点不是比较 PPO 和 SafeDreamer 谁性能更好，而是测试 SafeDreamer 在不同攻击/扰动条件下的安全性能是否退化。
 
-## 实现方案
+主要评价指标：
 
-实验统一使用 `SafetyPointGoal1-v0`，按低算力路线逐步推进：
+- `true_cost`：真实环境 cost，作为安全标签。
+- `exposed_cost`：策略或 wrapper 暴露出来的 cost，可能被攻击低估。
+- `violation_rate`：episode 中是否出现安全违规。
+- `return`：任务收益，用于观察安全和任务表现的权衡。
+- `attack_delta`：攻击条件相对 clean 条件的 true cost / violation rate 变化。
 
-1. 跑通 Safety-Gymnasium smoke test，确认环境、观测空间、动作空间和 cost 返回值正常。
-2. 生成随机策略 baseline，并保存 CSV 和统计图。
-3. 加入观测扰动和 cost 欺骗 wrapper，测试安全信号失真对评估的影响。
-4. 训练 PPO 作为更强的 model-free 对比策略。
-5. 引入 SafeDreamer 现有 checkpoint，做世界模型策略的初步安全性评估。
+## 实验流程
+
+整体流程按以下顺序推进：
+
+1. **环境验证**：跑通 Safety-Gymnasium，确认 `SafetyPointGoal1-v0` 的 observation、action 和 6 返回值接口正常。
+2. **攻击 wrapper 构建**：实现观测攻击和 cost 信号攻击，确保真实 cost 仍可用于离线评估。
+3. **随机策略 sanity check**：用随机策略验证 wrapper、CSV、分析脚本和图表生成流程。
+4. **SafeDreamer clean baseline**：加载现有 OSRP-Vector checkpoint，在 clean 环境下得到 SafeDreamer 的基准安全表现。
+5. **SafeDreamer attack evaluation**：在相同 checkpoint 下运行 `lidar_blind`、`hazard_blind`、`cost_under` 等攻击条件，比较 true cost 和 violation rate 是否恶化。
+6. **辅助参照**：PPO 只用于说明 reward-only 策略可能不安全，不作为主实验结论。
+
+## 攻击条件设计
+
+| 条件 | 目的 | 当前状态 |
+| --- | --- | --- |
+| `clean` | 无攻击基准 | 已用于随机策略和 SafeDreamer smoke eval |
+| `lidar_blind` | 遮蔽部分 lidar/观测维度，模拟危险感知缺失 | 已在随机策略 wrapper 中验证 |
+| `cost_under` | 将暴露 cost 缩小为 `0.25 * cost`，模拟安全反馈低估 | 已在随机策略 wrapper 中验证 |
+| `hazard_blind` | 精确遮蔽 hazard 相关观测或坐标 | 待实现 |
+| SafeDreamer attacked eval | 将上述攻击接入 SafeDreamer 环境封装 | 待实现 |
+
+## 可实现的 SafeDreamer 攻击方式
+
+本项目只研究仿真中的输入、反馈和执行链路扰动，不涉及真实机器人或系统入侵。推荐按以下优先级实现：
+
+| 攻击方式 | 作用对象 | 实现难度 | 课程项目价值 |
+| --- | --- | --- | --- |
+| `hazard_blind` | hazard 相关观测/坐标 | 中 | 直接测试危险感知缺失，是最贴合安全主题的主攻击 |
+| `lidar_blind` | lidar 或后若干维 observation | 低 | 已有随机策略 wrapper，可快速接入 SafeDreamer |
+| `obs_noise` | observation 向量 | 低 | 可设置噪声强度，画出攻击强度曲线 |
+| `obs_delay` | observation 时间序列 | 中 | 模拟传感器延迟，适合移动机器人安全场景 |
+| `cost_under` | 暴露给策略/日志的 cost | 低 | 测试安全反馈低估；对重新训练/微调实验更关键 |
+| `action_noise` | 执行动作 | 低 | 测试策略对执行误差的鲁棒性 |
+| `action_delay` | 执行动作时间序列 | 中 | 模拟控制延迟，适合作为扩展实验 |
+
+优先实现的主实验组合：
+
+| 条件 | 说明 |
+| --- | --- |
+| `safedreamer_clean` | 无攻击基准 |
+| `safedreamer_hazard_blind` | 遮蔽 hazard 信息，观察 true cost 是否上升 |
+| `safedreamer_lidar_blind` | 遮蔽部分观测，验证感知缺失影响 |
+| `safedreamer_obs_noise_0.1` | 添加中等强度观测噪声 |
+| `safedreamer_cost_under` | 暴露 cost 被低估，但评估仍使用真实 cost |
+
+不建议作为本课程主线的攻击：直接篡改 SafeDreamer 网络权重、对 JAX checkpoint 做参数级攻击、图像对抗样本、真实系统攻击。这些方向实现成本高，且会偏离当前 `osrp_vector` 低维观测路线。
+
+实现入口：
+
+- Safety-Gymnasium/random sanity wrapper：`scripts/obs_corruption_wrapper.py`、`scripts/cost_shift_wrapper.py`
+- SafeDreamer 环境封装：`external/SafeDreamer/SafeDreamer/embodied/envs/safetygymcoor.py`
+- 结果分析：`scripts/analyze_results.py`、`scripts/collect_safedreamer_results.py`
 
 ## 工作空间结构
 
 - `scripts/`：实验、训练、评估、分析和 replay 脚本。
 - `results/`：CSV、汇总表和结果说明。
 - `figures/`：统计图和部分 replay 文件。
+- `requirements/`：两个 conda 环境对应的 pip requirements。
 - `models/`：本地 PPO 模型权重，默认不提交 Git。
-- `external/SafeDreamer/`：用于 checkpoint 评估的 SafeDreamer 源码。
+- `external/SafeDreamer/`：用于 checkpoint 评估和后续训练的 SafeDreamer 源码。
 - `safety-gymnasium-main/`：本地 Safety-Gymnasium 源码副本，体积较大，默认不提交 Git。
 - `AGENTS.md`：面向代码协作 agent 的贡献指南。
 
@@ -38,7 +92,7 @@ obs, reward, cost, terminated, truncated, info = env.step(action)
 
 ### safegym：常规实验环境
 
-用于 Safety-Gymnasium smoke test、随机 baseline、PPO 训练、结果分析和 replay 录制：
+用于 Safety-Gymnasium smoke test、攻击 wrapper 验证、随机 sanity baseline、PPO 辅助参照、结果分析和 replay 录制：
 
 ```bash
 conda create -n safegym python=3.8 -y
@@ -65,7 +119,7 @@ python -m pip install --upgrade pip setuptools wheel
 python -m pip install -r requirements/safedreamer-py38.txt
 ```
 
-如果在 NVIDIA GPU 上训练，可先按 SafeDreamer 原 README 将 CPU 版 `jaxlib` 替换为 CUDA 11 版本：
+如果在 NVIDIA GPU 上训练，可按 SafeDreamer 原 README 将 CPU 版 `jaxlib` 替换为 CUDA 11 版本：
 
 ```bash
 python -m pip uninstall -y jaxlib
@@ -75,11 +129,11 @@ python -m pip install jaxlib==0.3.25+cuda11.cudnn82 \
 
 RTX 40 系显卡可以训练低维 `osrp_vector` 任务，但旧 JAX/CUDA 组合可能需要匹配驱动和 CUDA 兼容包。若 GPU 安装不稳定，先用 CPU 跑 checkpoint smoke test，再处理 GPU 训练环境。
 
-当前仓库保留 `external/SafeDreamer/` 小型源码副本，但不提交下载的 checkpoint 和运行日志。checkpoint 需单独下载到 `external/checkpoints/`。
+checkpoint 需单独下载到 `external/checkpoints/`，不会提交到 Git。
 
 ## 已实现内容
 
-### Safety-Gymnasium Smoke Test
+### 1. Safety-Gymnasium 环境验证
 
 已实现：
 
@@ -95,7 +149,7 @@ conda run -n safegym python scripts/check_safety_gym.py
 conda run -n safegym python scripts/inspect_obs_space.py
 ```
 
-### 随机策略与扰动实验
+### 2. 攻击 Wrapper 与随机策略验证
 
 已实现：
 
@@ -104,34 +158,17 @@ conda run -n safegym python scripts/inspect_obs_space.py
 - `scripts/cost_shift_wrapper.py`
 - `scripts/analyze_results.py`
 
-20 episode 结果：
+20 episode sanity check：
 
-| 条件 | Avg Return | Avg True Cost | Violation Rate |
-| --- | ---: | ---: | ---: |
-| clean | 0.1186 | 35.30 | 0.20 |
-| lidar_blind | 0.1186 | 35.30 | 0.20 |
-| cost_under | 0.1186 | 35.30 | 0.20 |
+| 条件 | Avg Return | Avg True Cost | Avg Exposed Cost | Violation Rate |
+| --- | ---: | ---: | ---: | ---: |
+| clean | 0.1186 | 35.30 | 35.30 | 0.20 |
+| lidar_blind | 0.1186 | 35.30 | 35.30 | 0.20 |
+| cost_under | 0.1186 | 35.30 | 8.825 | 0.20 |
 
-随机策略不使用观测，因此 `lidar_blind` 与 clean 一致；`cost_under` 用于验证暴露 cost 被低估时，真实 cost 仍可从 `info` 中保留。
+随机策略不使用观测，因此 `lidar_blind` 与 clean 一致。这部分的意义是验证攻击和统计链路。`cost_under` 已能制造暴露 cost 与真实 cost 的偏差。
 
-### PPO 对比策略
-
-已实现：
-
-- `scripts/train_ppo_baseline.py`
-- `scripts/record_ppo_replay.py`
-
-20 episode 结果：
-
-| 策略 | Avg Return | Avg True Cost | Violation Rate |
-| --- | ---: | ---: | ---: |
-| random_clean | 0.1186 | 35.30 | 0.20 |
-| ppo_50k_eval | -0.7700 | 63.35 | 0.35 |
-| ppo_reward_only_100k_eval | 19.7365 | 84.30 | 1.00 |
-
-reward-only PPO 的任务收益明显高于随机策略，但安全违规率达到 100%，说明只优化 reward 会牺牲安全性。
-
-### SafeDreamer 初步评估
+### 3. SafeDreamer Clean Baseline
 
 已实现：
 
@@ -146,28 +183,50 @@ Weidong-Huang/SafeDreamer:
 safedreamer_osrp_vector/20240307-010600_osrp_vector_safetygymcoor_SafetyPointGoal1-v0_0.ckpt
 ```
 
-初步结果：
+clean smoke result：
 
-| 方法 | Episodes | Avg Return | Avg True Cost | Violation Rate |
+| 条件 | Episodes | Avg Return | Avg True Cost | Violation Rate |
 | --- | ---: | ---: | ---: | ---: |
-| random_clean | 20 | 0.1186 | 35.30 | 0.20 |
-| ppo_reward_only_100k_eval | 20 | 19.7365 | 84.30 | 1.00 |
 | safedreamer_clean | 2 | 6.2800 | 0.00 | 0.00 |
 
-SafeDreamer checkpoint 已能加载并完成 CPU smoke evaluation。2 个 episode 中 true cost 为 0，但样本数还不足以作为最终结论。
+该结果只说明 SafeDreamer checkpoint 能在当前环境加载并完成 clean evaluation。样本数少，且尚未接入攻击条件，因此不能作为最终安全结论。
+
+### 4. PPO 辅助参照
+
+已实现：
+
+- `scripts/train_ppo_baseline.py`
+- `scripts/record_ppo_replay.py`
+
+20 episode 结果：
+
+| 策略 | Avg Return | Avg True Cost | Violation Rate |
+| --- | ---: | ---: | ---: |
+| random_clean | 0.1186 | 35.30 | 0.20 |
+| ppo_50k_eval | -0.7700 | 63.35 | 0.35 |
+| ppo_reward_only_100k_eval | 19.7365 | 84.30 | 1.00 |
+
+PPO 结果作为辅助背景：reward-only 策略可以获得更高任务收益，但安全违规显著增加。主实验仍是 SafeDreamer 在攻击条件下的 true cost 变化。
 
 ## 常用命令
 
-运行随机 baseline：
+运行随机攻击 sanity check：
 
 ```bash
 conda run -n safegym python scripts/run_random_baseline.py \
   --episodes 20 \
-  --corruption none \
-  --out results/random_clean.csv
+  --corruption cost_under \
+  --out results/random_cost_under.csv
 ```
 
-训练并评估 PPO：
+运行 SafeDreamer clean checkpoint 评估：
+
+```bash
+python scripts/run_safedreamer_eval.py --steps 1000
+conda run -n safegym python scripts/collect_safedreamer_results.py
+```
+
+训练并评估 PPO 辅助参照：
 
 ```bash
 conda run -n safegym python scripts/train_ppo_baseline.py \
@@ -176,13 +235,6 @@ conda run -n safegym python scripts/train_ppo_baseline.py \
   --eval-episodes 20 \
   --model-out models/ppo_safety_point_goal_reward_only_100k.zip \
   --eval-out results/2026-06-13-ppo-baseline/ppo_reward_only_100k_eval.csv
-```
-
-运行 SafeDreamer checkpoint 评估：
-
-```bash
-python scripts/run_safedreamer_eval.py --steps 1000
-conda run -n safegym python scripts/collect_safedreamer_results.py
 ```
 
 录制 replay：
@@ -197,21 +249,23 @@ conda run -n safegym python scripts/record_safety_gym_replay.py \
 
 ## 关键输出
 
-- 随机扰动实验：`results/2026-06-12-random-perturbations/`
-- PPO 实验：`results/2026-06-13-ppo-baseline/`
-- SafeDreamer 实验：`results/2026-06-13-safedreamer-eval/`
+- 攻击 wrapper sanity check：`results/2026-06-12-random-perturbations/`
+- SafeDreamer clean smoke eval：`results/2026-06-13-safedreamer-eval/`
+- PPO 辅助参照：`results/2026-06-13-ppo-baseline/`
 - 汇总图：
   - `figures/2026-06-12-random-perturbations/summary_metrics.png`
-  - `figures/2026-06-13-ppo-baseline/summary_metrics.png`
   - `figures/2026-06-13-safedreamer-eval/summary_metrics.png`
+  - `figures/2026-06-13-ppo-baseline/summary_metrics.png`
 
-## 未实现内容
+## 下一步
 
-- SafeDreamer 在 `hazard_blind`、`cost_under` 等扰动条件下的系统评估。
-- 10-20 episode 的 SafeDreamer 统计对比。
-- SafeDreamer 重新训练或微调。
-- 学习式 cost predictor 的备用实验。
-- 最终课程展示 slides 和完整实验报告。
+- 将 `lidar_blind`、`cost_under` 攻击接入 SafeDreamer 的 `safetygymcoor` 环境封装。
+- 新增 `hazard_blind`，只遮蔽 hazard 相关观测或坐标。
+- 新增 `obs_noise` 和 `action_noise`，支持设置攻击强度。
+- 对 `safedreamer_clean`、`safedreamer_hazard_blind`、`safedreamer_lidar_blind`、`safedreamer_obs_noise_0.1`、`safedreamer_cost_under` 运行 10-20 episode。
+- 统计 attack delta：`true_cost`、`violation_rate`、`return` 相对 clean 的变化。
+- 如时间允许，在受攻击数据或新约束下重新训练/微调 SafeDreamer。
+- 准备最终课程报告和 slides，强调 Safety-Gymnasium 是真实安全环境，SafeDreamer 是被测世界模型策略。
 
 ## Git 与共享说明
 
@@ -221,7 +275,7 @@ conda run -n safegym python scripts/record_safety_gym_replay.py \
 
 ```bash
 git add .
-git commit -m "Initial SafeGym reliability experiments"
+git commit -m "Initial SafeDreamer attack robustness experiments"
 ```
 
 如需上传 GitHub，再添加远程仓库：

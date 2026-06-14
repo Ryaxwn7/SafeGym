@@ -1,4 +1,4 @@
-# PPO Baseline Comparison
+# PPO Auxiliary Reference
 
 ## Experiment Setup
 
@@ -30,7 +30,7 @@ The reward-only PPO policy is a stronger task policy than random: average return
 
 The 50k cost-penalty PPO run did not outperform random. It is retained as a useful negative result: a short PPO run with a naive cost penalty is not enough to produce a reliable safe policy in this environment.
 
-For the course project, the key conclusion is that a learned PPO policy can improve reward while increasing true safety cost. This motivates the next SafeDreamer/world-model stage: evaluate whether a safety-aware world model can reduce true cost without relying only on task reward.
+For the course project, PPO is auxiliary context rather than the main comparison target. The key takeaway is that reward optimization alone can increase true safety cost. The main project question is now whether SafeDreamer remains safe when its observations or safety-cost signals are attacked.
 
 ## Outputs
 

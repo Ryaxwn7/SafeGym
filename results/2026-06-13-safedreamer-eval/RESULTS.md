@@ -1,4 +1,4 @@
-# SafeDreamer Checkpoint Evaluation
+# SafeDreamer Clean Smoke Evaluation
 
 ## Setup
 
@@ -10,7 +10,7 @@
 - JAX/JAXLIB: `0.3.25` / `0.3.25`, CPU backend
 - Logger change: TensorBoard output is skipped when TensorFlow is not installed; JSONL logs are still written.
 
-## SafeDreamer Clean Result
+## Clean Baseline Result
 
 SafeDreamer loaded the existing OSRP-Vector checkpoint and completed two clean evaluation episodes before the original TensorBoard logger failure. Those episodes were preserved in `scores.jsonl` and collected into `safedreamer_clean.csv`.
 
@@ -18,7 +18,7 @@ SafeDreamer loaded the existing OSRP-Vector checkpoint and completed two clean e
 | --- | ---: | ---: | ---: | ---: |
 | safedreamer_clean | 2 | 6.279988 | 0.00 | 0.00 |
 
-## Comparison With Current Baselines
+## Auxiliary Context
 
 | Method | Episodes | Avg Return | Avg True Cost | Violation Rate |
 | --- | ---: | ---: | ---: | ---: |
@@ -28,9 +28,11 @@ SafeDreamer loaded the existing OSRP-Vector checkpoint and completed two clean e
 
 ## Interpretation
 
-The SafeDreamer checkpoint acts as a world-model-based safe RL policy in the same Safety-Gymnasium task family. In this smoke evaluation, it achieved higher return than the random baseline while producing zero true cost in the two completed episodes. Compared with reward-only PPO, SafeDreamer sacrificed return but avoided safety violations.
+The SafeDreamer checkpoint is the primary subject of the project. This clean run establishes that the OSRP-Vector checkpoint can be loaded and evaluated in `SafetyPointGoal1-v0`, and it gives the clean reference point for later attack experiments.
 
-This is a promising smoke result, not a final statistical conclusion: SafeDreamer was evaluated for only two episodes on CPU because each policy step is slow and the original eval path spends extra time generating prediction plots/videos. A stronger final comparison should run more episodes or patch eval-only mode to disable report plotting.
+The random and PPO rows are auxiliary context only. They are not the main comparison target. The next required experiment is to evaluate the same SafeDreamer checkpoint under observation and cost-signal attacks such as `lidar_blind`, `hazard_blind`, and `cost_under`, then compare true cost and violation rate against this clean baseline.
+
+This is not a final statistical conclusion: SafeDreamer was evaluated for only two episodes on CPU because each policy step is slow and the original eval path spends extra time generating prediction plots/videos. A stronger final result should run 10-20 episodes per attack condition or patch eval-only mode to disable report plotting.
 
 ## Outputs
 
