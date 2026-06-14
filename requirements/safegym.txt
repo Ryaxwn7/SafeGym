@@ -1,0 +1,19 @@
+# Python 3.8 environment for Safety-Gymnasium smoke tests, baselines, PPO, analysis, and replay.
+#
+# Create with:
+#   conda create -n safegym python=3.8 -y
+#   conda activate safegym
+#   python -m pip install --upgrade pip setuptools wheel
+#   python -m pip install -r requirements/safegym.txt
+
+safety-gymnasium==1.2.0
+gymnasium==0.28.1
+gymnasium-robotics==1.2.2
+mujoco==2.3.3
+numpy==1.23.5
+pandas==2.0.3
+matplotlib==3.7.5
+tqdm==4.68.2
+imageio==2.35.1
+pygame==2.1.0
+stable-baselines3==2.3.2

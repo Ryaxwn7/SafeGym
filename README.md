@@ -32,16 +32,50 @@ obs, reward, cost, terminated, truncated, info = env.step(action)
 - `safety-gymnasium-main/`：本地 Safety-Gymnasium 源码副本，体积较大，默认不提交 Git。
 - `AGENTS.md`：面向代码协作 agent 的贡献指南。
 
-## 环境依赖
+## 环境安装
 
-常规实验使用 `safegym` 环境：
+本项目使用两个独立 conda 环境。推荐在新机器上从仓库根目录执行以下命令。
+
+### safegym：常规实验环境
+
+用于 Safety-Gymnasium smoke test、随机 baseline、PPO 训练、结果分析和 replay 录制：
 
 ```bash
+conda create -n safegym python=3.8 -y
 conda activate safegym
-pip install safety-gymnasium numpy pandas matplotlib tqdm stable-baselines3 imageio
+python -m pip install --upgrade pip setuptools wheel
+python -m pip install -r requirements/safegym.txt
 ```
 
-SafeDreamer checkpoint 评估使用 `safedreamer-py38` 环境，并依赖 JAX 0.3.x。当前仓库保留 `external/SafeDreamer/` 小型源码副本，但不提交下载的 checkpoint 和运行日志。
+安装后检查：
+
+```bash
+python -c "import safety_gymnasium; print('OK')"
+python scripts/check_safety_gym.py
+```
+
+### safedreamer-py38：SafeDreamer 环境
+
+用于 SafeDreamer checkpoint 评估和后续从头训练。该代码依赖旧版 JAX，默认 requirements 使用 CPU 版 `jaxlib==0.3.25`：
+
+```bash
+conda create -n safedreamer-py38 python=3.8 -y
+conda activate safedreamer-py38
+python -m pip install --upgrade pip setuptools wheel
+python -m pip install -r requirements/safedreamer-py38.txt
+```
+
+如果在 NVIDIA GPU 上训练，可先按 SafeDreamer 原 README 将 CPU 版 `jaxlib` 替换为 CUDA 11 版本：
+
+```bash
+python -m pip uninstall -y jaxlib
+python -m pip install jaxlib==0.3.25+cuda11.cudnn82 \
+  -f https://storage.googleapis.com/jax-releases/jax_cuda_releases.html
+```
+
+RTX 40 系显卡可以训练低维 `osrp_vector` 任务，但旧 JAX/CUDA 组合可能需要匹配驱动和 CUDA 兼容包。若 GPU 安装不稳定，先用 CPU 跑 checkpoint smoke test，再处理 GPU 训练环境。
+
+当前仓库保留 `external/SafeDreamer/` 小型源码副本，但不提交下载的 checkpoint 和运行日志。checkpoint 需单独下载到 `external/checkpoints/`。
 
 ## 已实现内容
 
