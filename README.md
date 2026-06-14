@@ -226,6 +226,60 @@ python scripts/run_safedreamer_eval.py --steps 1000
 conda run -n safegym python scripts/collect_safedreamer_results.py
 ```
 
+运行完整 SafeDreamer 攻击测试套件：
+
+```bash
+python scripts/run_safedreamer_attack_suite.py --episodes 1 --continue-on-error
+```
+
+脚本会按条件顺序运行，实时打印 `[时间][条件]` 进度，并把每个条件的完整日志保存到：
+
+```text
+results/2026-06-14-safedreamer-attacks/<condition>/run.log
+```
+
+### Episode 数量建议
+
+SafeDreamer CPU eval 较慢，不建议一开始就跑大量 episode。推荐分三档：
+
+| 用途 | 每个条件 episode 数 | 说明 |
+| --- | ---: | --- |
+| smoke test | 1-2 | 确认环境、攻击 wrapper、日志和 CSV 能跑通 |
+| 课程报告初步结果 | 5 | 能观察 clean vs attack 趋势，适合当前阶段 |
+| 最终对比结果 | 10 | 更适合放入最终表格；若时间充足再扩到 20 |
+
+推荐运行顺序：
+
+```bash
+# 1. 先跑通全部条件
+python scripts/run_safedreamer_attack_suite.py --episodes 1 --continue-on-error
+
+# 2. 生成课程项目主结果
+python scripts/run_safedreamer_attack_suite.py --episodes 5 --force --continue-on-error
+
+# 3. 时间充足时生成最终对比
+python scripts/run_safedreamer_attack_suite.py --episodes 10 --force --continue-on-error
+```
+
+已有 CSV 默认跳过，适合中断后继续跑。常用选项：
+
+```bash
+python scripts/run_safedreamer_attack_suite.py --list
+python scripts/run_safedreamer_attack_suite.py --only safedreamer_cost_under
+python scripts/run_safedreamer_attack_suite.py --force --only safedreamer_clean
+python scripts/run_safedreamer_attack_suite.py --episodes 3 --force
+```
+
+当前 `SafetyPointGoal1-v0` 在 SafeDreamer `safetygymcoor` 配置中 `repeat=5`，一个完整 episode 约为 200 个 policy step。脚本默认用 `--episode-length 200`，并自动计算 `steps = episodes * episode_length + step_margin`，避免只跑半个 episode 后没有 CSV。
+
+套件输出：
+
+```text
+results/2026-06-14-safedreamer-attacks/all_episodes.csv
+results/2026-06-14-safedreamer-attacks/summary.csv
+results/2026-06-14-safedreamer-attacks/failures.csv  # only if a condition fails
+```
+
 训练并评估 PPO 辅助参照：
 
 ```bash

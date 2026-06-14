@@ -1,0 +1,5 @@
+condition,episode,step,return,cost,true_cost,exposed_cost,steps,violated
+safedreamer_hazard_blind,0,1005,4.6877588495772216,17.0,17.0,17.0,200,1
+safedreamer_hazard_blind,1,2010,-2.2499252635025186,89.0,89.0,89.0,200,1
+safedreamer_hazard_blind,2,3015,9.143449577735737,52.0,52.0,52.0,200,1
+safedreamer_hazard_blind,3,4020,6.710413134947885,43.0,43.0,43.0,200,1

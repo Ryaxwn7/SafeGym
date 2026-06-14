@@ -1,0 +1,5 @@
+condition,episode,step,return,cost,true_cost,exposed_cost,steps,violated
+safedreamer_obs_noise_0.1,0,1005,-0.2445096101728268,0.0,0.0,0.0,200,0
+safedreamer_obs_noise_0.1,1,2010,17.17106679212884,0.0,0.0,0.0,200,0
+safedreamer_obs_noise_0.1,2,3015,19.288888367067557,0.0,0.0,0.0,200,0
+safedreamer_obs_noise_0.1,3,4020,0.8655130389379337,0.0,0.0,0.0,200,0

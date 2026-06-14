@@ -58,7 +58,7 @@ defaults:
     metadrive: {size: [64,64], repeat: 4, render: False, obs_key: 'image'}
     carracing: {size: [64,64], repeat: 2, render: False, obs_key: 'image'}
     safetygym: {size: [64,64], repeat: 1, render: False, obs_key: 'observation', camera_name: 'fixedfar'}
-    safetygymcoor: {size: [64,64], repeat: 5, render: False, obs_key: 'observation', camera_name: 'fixedfar'}
+    safetygymcoor: {size: [64,64], repeat: 5, render: False, obs_key: 'observation', camera_name: 'fixedfar', attack: none, attack_strength: 0.0, obs_noise_std: 0.0, obs_delay: 0, action_noise_std: 0.0, action_delay: 0, cost_scale: 1.0, attack_seed: 0}
     safetygymmujoco: {size: [64,64], repeat: 1, render: False, obs_key: 'observation'}
   # Agent
   task_behavior: Greedy
@@ -220,7 +220,7 @@ osrp_vector:
   task: safetygymcoor_SafetyPointGoal1-v0
   envs.amount: 1
   # vision, track, fixednear, fixedfar, vision_front_back
-  env.safetygymcoor: {size: [64,64], repeat: 5, render: True, obs_key: 'observation', camera_name: 'fixedfar'}
+  env.safetygymcoor: {size: [64,64], repeat: 5, render: True, obs_key: 'observation', camera_name: 'fixedfar', attack: none, attack_strength: 0.0, obs_noise_std: 0.0, obs_delay: 0, action_noise_std: 0.0, action_delay: 0, cost_scale: 1.0, attack_seed: 0}
   loss_scales: {vector: 5.0}
   env.safetygymmujoco: {repeat: 1,render: False, obs_key: 'observation'}
   run.train_ratio: 512
@@ -279,7 +279,7 @@ dreamerv3_vector:
   envs.amount: 1
   # vision, track, fixednear, fixedfar, vision_front_back
   env.safetygymmujoco: {repeat: 1,render: False, obs_key: 'observation'}
-  env.safetygymcoor: {size: [64,64], repeat: 5, render: False, obs_key: 'observation', camera_name: 'fixedfar'}
+  env.safetygymcoor: {size: [64,64], repeat: 5, render: False, obs_key: 'observation', camera_name: 'fixedfar', attack: none, attack_strength: 0.0, obs_noise_std: 0.0, obs_delay: 0, action_noise_std: 0.0, action_delay: 0, cost_scale: 1.0, attack_seed: 0}
   loss_scales: {vector: 5.0}
   run.train_ratio: 512
   run:

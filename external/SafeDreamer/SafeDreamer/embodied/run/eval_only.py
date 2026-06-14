@@ -50,6 +50,7 @@ def eval_only(agent, env, logger, args, lag):
 
   logdir = embodied.Path(args.logdir)
   logdir.mkdirs()
+  fast_eval = os.environ.get('SAFEDREAMER_FAST_EVAL', '0') == '1'
   print('Logdir', logdir)
   should_log = embodied.when.Clock(args.log_every)
   step = logger.step
@@ -123,6 +124,13 @@ def eval_only(agent, env, logger, args, lag):
       cost = float(ep['cost'].astype(np.float64).sum())
       logger.add({'cost': cost}, prefix='episode')
       print(f'Episode has {length} steps and cost {cost:.1f}.')
+    if 'log_true_cost' in ep.keys():
+      true_cost = float(ep['log_true_cost'].astype(np.float64).sum())
+      logger.add({'true_cost': true_cost}, prefix='episode')
+      print(f'Episode has {length} steps and true cost {true_cost:.1f}.')
+    if 'log_exposed_cost' in ep.keys():
+      exposed_cost = float(ep['log_exposed_cost'].astype(np.float64).sum())
+      logger.add({'exposed_cost': exposed_cost}, prefix='episode')
     stats = {}
     for key in args.log_keys_video:
       if key in ep:
@@ -141,6 +149,9 @@ def eval_only(agent, env, logger, args, lag):
     ep_expend = {}
     for key, value in ep.items():
       ep_expend[key] = np.expand_dims(value, 0)
+
+    if fast_eval:
+      return
 
     model_report = agent.report_eval(ep_expend)
 

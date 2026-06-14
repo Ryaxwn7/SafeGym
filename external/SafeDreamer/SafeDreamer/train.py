@@ -116,7 +116,7 @@ def make_logger(parsed, logdir, step, config):
   outputs = [
       embodied.logger.TerminalOutput(config.filter),
       embodied.logger.JSONLOutput(logdir, 'metrics.jsonl'),
-      embodied.logger.JSONLOutput(logdir, 'scores.jsonl', 'episode/score|episode/cost'),
+      embodied.logger.JSONLOutput(logdir, 'scores.jsonl', 'episode/length|episode/score|episode/cost|episode/true_cost|episode/exposed_cost'),
       # embodied.logger.WandBOutput(logdir, config),
       # embodied.logger.MLFlowOutput(logdir.name),
   ]

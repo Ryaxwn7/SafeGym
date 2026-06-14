@@ -27,22 +27,30 @@ def read_scores(path):
             item = json.loads(line)
             if 'episode/score' in item:
                 pending['return'] = float(item['episode/score'])
+            if 'episode/length' in item:
+                pending['steps'] = int(item['episode/length'])
             if 'episode/cost' in item:
                 pending['cost'] = float(item['episode/cost'])
+            if 'episode/true_cost' in item:
+                pending['true_cost'] = float(item['episode/true_cost'])
+            if 'episode/exposed_cost' in item:
+                pending['exposed_cost'] = float(item['episode/exposed_cost'])
             if 'episode/score' in item or 'episode/cost' in item:
                 pending['step'] = int(item.get('step', 0))
             if 'return' in pending and 'cost' in pending:
+                true_cost = pending.get('true_cost', pending['cost'])
+                exposed_cost = pending.get('exposed_cost', pending['cost'])
                 rows.append(
                     {
-                        'condition': 'safedreamer_clean',
+                        'condition': '',
                         'episode': episode,
                         'step': pending.get('step', 0),
                         'return': pending['return'],
                         'cost': pending['cost'],
-                        'true_cost': pending['cost'],
-                        'exposed_cost': pending['cost'],
-                        'steps': 200,
-                        'violated': int(pending['cost'] > 0.0),
+                        'true_cost': true_cost,
+                        'exposed_cost': exposed_cost,
+                        'steps': pending.get('steps', 200),
+                        'violated': int(true_cost > 0.0),
                     }
                 )
                 episode += 1
@@ -54,6 +62,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--root', default='results/2026-06-13-safedreamer-eval')
     parser.add_argument('--out', default='results/2026-06-13-safedreamer-eval/safedreamer_clean.csv')
+    parser.add_argument('--condition', default='safedreamer_clean')
     args = parser.parse_args()
 
     logdir = latest_logdir(args.root)
@@ -68,6 +77,7 @@ def main():
     out_path = Path(args.out)
     out_path.parent.mkdir(parents=True, exist_ok=True)
     df = pd.DataFrame(rows)
+    df['condition'] = args.condition
     df.to_csv(out_path, index=False)
 
     print('logdir:', logdir)

@@ -7,7 +7,12 @@ import numpy as np
 
 class SafetyGymCoor(embodied.Env):
 
-  def __init__(self, env, platform='gpu', repeat=1, obs_key='observation', render=False, size=(64, 64), camera=-1, mode='train', camera_name='vision'):
+  def __init__(
+      self, env, platform='gpu', repeat=1, obs_key='observation',
+      render=False, size=(64, 64), camera=-1, mode='train',
+      camera_name='vision', attack='none', attack_strength=0.0,
+      obs_noise_std=0.0, obs_delay=0, action_noise_std=0.0,
+      action_delay=0, cost_scale=1.0, attack_seed=0):
 
     # TODO: This env variable is meant for headless GPU machines but may fail
     # on CPU-only machines.
@@ -29,6 +34,16 @@ class SafetyGymCoor(embodied.Env):
     self._render = render if mode=='train' else True
     self._size = size
     self._camera = camera
+    self._attack = attack
+    self._attack_strength = float(attack_strength)
+    self._obs_noise_std = float(obs_noise_std)
+    self._obs_delay = int(obs_delay)
+    self._action_noise_std = float(action_noise_std)
+    self._action_delay = int(action_delay)
+    self._cost_scale = float(cost_scale)
+    self._rng = np.random.default_rng(int(attack_seed))
+    self._obs_history = []
+    self._action_history = []
 
     self._constraints = ['hazards']  #'gremlins', 'buttons'],
     self._xyz_sensors = ['velocimeter', 'accelerometer']
@@ -88,6 +103,8 @@ class SafetyGymCoor(embodied.Env):
     spaces2 = {'observation': self.coordinate_observation_space}
     spaces2 = {k: self._convert(v) for k, v in spaces2.items()}
     spaces.update(spaces2)
+    spaces['log_true_cost'] = embodied.Space(np.float32)
+    spaces['log_exposed_cost'] = embodied.Space(np.float32)
     if self._render:
       spaces['image'] = embodied.Space(np.uint8, self._size + (3,))
     return spaces
@@ -99,8 +116,11 @@ class SafetyGymCoor(embodied.Env):
   def step(self, action):
     action = action.copy()
     if action['reset']:
+      self._obs_history = []
+      self._action_history = []
       obs = self._reset()
     else:
+        action = self._attack_action(action)
         reward = 0.0
         cost = 0.0
         for i in range(self._repeat):
@@ -112,13 +132,24 @@ class SafetyGymCoor(embodied.Env):
                 break
         obs['reward'] = np.float32(reward)
         if 'cost' in obs.keys():
-            obs['cost'] = np.float32(cost)
+            true_cost = float(cost)
+            exposed_cost = self._attack_cost(true_cost)
+            obs['cost'] = np.float32(exposed_cost)
+            obs['log_true_cost'] = np.float32(true_cost)
+            obs['log_exposed_cost'] = np.float32(exposed_cost)
     coordinate_sensor_obs = self._get_coordinate_sensor()
     obs_coor = self._get_flat_coordinate(coordinate_sensor_obs)
+    obs_coor = self._attack_observation(obs_coor)
     obs['observation'] = obs_coor
+    if 'log_true_cost' not in obs:
+        true_cost = float(obs.get('cost', 0.0))
+        exposed_cost = self._attack_cost(true_cost)
+        obs['cost'] = np.float32(exposed_cost)
+        obs['log_true_cost'] = np.float32(true_cost)
+        obs['log_exposed_cost'] = np.float32(exposed_cost)
     if self._render:
         if self._mode == 'eval':
-            obs['image_far'] = self._env.task.render(width=1024, height=1024, mode='rgb_array', camera_name='fixedfar', cost={'cost_sum': obs['cost']})
+            obs['image_far'] = self._env.task.render(width=1024, height=1024, mode='rgb_array', camera_name='fixedfar', cost={'cost_sum': obs['log_true_cost']})
         else:
             obs['image_far'] = self.render()
     return obs
@@ -187,6 +218,56 @@ class SafetyGymCoor(embodied.Env):
           idx = self.key_to_slice[k]
           flat_obs[idx] = coordinate_obs[k].flat
       return flat_obs
+
+  def _attack_observation(self, obs):
+      obs = np.array(obs, copy=True, dtype=np.float32)
+      attack = self._attack
+      if attack == 'lidar_blind':
+          blind_dims = int(self._attack_strength) if self._attack_strength > 0 else 8
+          obs[-blind_dims:] = 1.0
+      elif attack == 'hazard_blind':
+          idx = self.key_to_slice.get('hazards')
+          if idx is not None:
+              obs[idx] = 0.0
+      elif attack == 'obs_noise':
+          std = self._obs_noise_std or self._attack_strength or 0.1
+          obs += self._rng.normal(0.0, std, size=obs.shape).astype(np.float32)
+      elif attack == 'obs_delay':
+          delay = self._obs_delay or int(self._attack_strength) or 1
+          self._obs_history.append(obs.copy())
+          if len(self._obs_history) > delay:
+              obs = self._obs_history[-delay - 1].copy()
+      elif self._obs_delay > 0:
+          self._obs_history.append(obs.copy())
+          if len(self._obs_history) > self._obs_delay:
+              obs = self._obs_history[-self._obs_delay - 1].copy()
+      return obs
+
+  def _attack_action(self, action):
+      attack = self._attack
+      if attack == 'action_noise':
+          std = self._action_noise_std or self._attack_strength or 0.1
+          action['action'] = np.asarray(action['action'], dtype=np.float32)
+          action['action'] = action['action'] + self._rng.normal(
+              0.0, std, size=action['action'].shape).astype(np.float32)
+      elif attack == 'action_delay':
+          delay = self._action_delay or int(self._attack_strength) or 1
+          current = np.asarray(action['action']).copy()
+          self._action_history.append(current)
+          if len(self._action_history) > delay:
+              action['action'] = self._action_history[-delay - 1].copy()
+      elif self._action_delay > 0:
+          current = np.asarray(action['action']).copy()
+          self._action_history.append(current)
+          if len(self._action_history) > self._action_delay:
+              action['action'] = self._action_history[-self._action_delay - 1].copy()
+      return action
+
+  def _attack_cost(self, true_cost):
+      if self._attack == 'cost_under':
+          scale = self._cost_scale if self._cost_scale != 1.0 else 0.25
+          return true_cost * scale
+      return true_cost * self._cost_scale
 
   def _get_coordinate_sensor(self) -> dict:
       """

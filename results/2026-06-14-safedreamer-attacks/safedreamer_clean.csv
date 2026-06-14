@@ -1,0 +1,5 @@
+condition,episode,step,return,cost,true_cost,exposed_cost,steps,violated
+safedreamer_clean,0,1005,-0.06760392957585282,0.0,0.0,0.0,200,0
+safedreamer_clean,1,2010,25.61359983496368,0.0,0.0,0.0,200,0
+safedreamer_clean,2,3015,27.61485629150411,0.0,0.0,0.0,200,0
+safedreamer_clean,3,4020,3.0610352635922027,0.0,0.0,0.0,200,0
