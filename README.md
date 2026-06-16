@@ -38,10 +38,10 @@ obs, reward, cost, terminated, truncated, info = env.step(action)
 | 条件 | 目的 | 当前状态 |
 | --- | --- | --- |
 | `clean` | 无攻击基准 | 已用于随机策略和 SafeDreamer smoke eval |
-| `lidar_blind` | 遮蔽部分 lidar/观测维度，模拟危险感知缺失 | 已在随机策略 wrapper 中验证 |
-| `cost_under` | 将暴露 cost 缩小为 `0.25 * cost`，模拟安全反馈低估 | 已在随机策略 wrapper 中验证 |
-| `hazard_blind` | 精确遮蔽 hazard 相关观测或坐标 | 待实现 |
-| SafeDreamer attacked eval | 将上述攻击接入 SafeDreamer 环境封装 | 待实现 |
+| `lidar_blind` | 遮蔽部分 lidar/观测维度，模拟危险感知缺失 | 已接入 SafeDreamer 评估 |
+| `cost_under` | 将暴露 cost 缩小为 `0.25 * cost`，模拟安全反馈低估 | 已接入 SafeDreamer 评估 |
+| `hazard_blind` | 精确遮蔽 hazard 相关观测或坐标 | 已接入 SafeDreamer 评估 |
+| SafeDreamer attacked eval | 将上述攻击接入 SafeDreamer 环境封装 | 已实现一键测试套件 |
 
 ## 可实现的 SafeDreamer 攻击方式
 
@@ -226,6 +226,38 @@ python scripts/run_safedreamer_eval.py --steps 1000
 conda run -n safegym python scripts/collect_safedreamer_results.py
 ```
 
+查看 SafeDreamer 策略执行画面：
+
+```bash
+python scripts/run_safedreamer_eval.py \
+  --condition replay_clean \
+  --attack none \
+  --steps 250 \
+  --fast-eval \
+  --save-video \
+  --logdir results/safedreamer-replays
+```
+
+查看攻击条件下的策略执行画面，例如 hazard blind：
+
+```bash
+python scripts/run_safedreamer_eval.py \
+  --condition replay_hazard_blind \
+  --attack hazard_blind \
+  --steps 250 \
+  --fast-eval \
+  --save-video \
+  --logdir results/safedreamer-replays
+```
+
+视频会保存到：
+
+```text
+results/safedreamer-replays/<condition>/<timestamp>_name_safetygymcoor_SafetyPointGoal1-v0_0/groundtruth_video_far_list_*.mp4
+```
+
+`--save-video` 会保存真实环境第三视角执行视频，并跳过昂贵的 model report。不要在完整 attack suite 中默认开视频，否则会生成大量 mp4 文件。
+
 运行完整 SafeDreamer 攻击测试套件：
 
 ```bash
@@ -235,7 +267,13 @@ python scripts/run_safedreamer_attack_suite.py --episodes 1 --continue-on-error
 脚本会按条件顺序运行，实时打印 `[时间][条件]` 进度，并把每个条件的完整日志保存到：
 
 ```text
-results/2026-06-14-safedreamer-attacks/<condition>/run.log
+results/safedreamer-attack-runs/<YYYYMMDD-HHMMSS>/<condition>/run.log
+```
+
+默认每次运行都会创建一个新的时间戳结果目录，避免复用旧 CSV。脚本也会写入：
+
+```text
+results/safedreamer-attack-runs/<YYYYMMDD-HHMMSS>/run_metadata.json
 ```
 
 ### Episode 数量建议
@@ -255,19 +293,36 @@ SafeDreamer CPU eval 较慢，不建议一开始就跑大量 episode。推荐分
 python scripts/run_safedreamer_attack_suite.py --episodes 1 --continue-on-error
 
 # 2. 生成课程项目主结果
-python scripts/run_safedreamer_attack_suite.py --episodes 5 --force --continue-on-error
+python scripts/run_safedreamer_attack_suite.py --episodes 5 --continue-on-error
 
 # 3. 时间充足时生成最终对比
-python scripts/run_safedreamer_attack_suite.py --episodes 10 --force --continue-on-error
+python scripts/run_safedreamer_attack_suite.py --episodes 10 --continue-on-error
 ```
 
-已有 CSV 默认跳过，适合中断后继续跑。常用选项：
+常用选项：
 
 ```bash
 python scripts/run_safedreamer_attack_suite.py --list
 python scripts/run_safedreamer_attack_suite.py --only safedreamer_cost_under
-python scripts/run_safedreamer_attack_suite.py --force --only safedreamer_clean
-python scripts/run_safedreamer_attack_suite.py --episodes 3 --force
+python scripts/run_safedreamer_attack_suite.py --episodes 3
+python scripts/run_safedreamer_attack_suite.py --run-id smoke-001 --episodes 1
+```
+
+如果要继续某个中断的旧目录，显式指定 `--outdir` 并加 `--resume`：
+
+```bash
+python scripts/run_safedreamer_attack_suite.py \
+  --outdir results/safedreamer-attack-runs/20260616-104644 \
+  --resume \
+  --continue-on-error
+```
+
+如果要覆盖旧目录中的 CSV，使用 `--force`：
+
+```bash
+python scripts/run_safedreamer_attack_suite.py \
+  --outdir results/safedreamer-attack-runs/20260616-104644 \
+  --force
 ```
 
 当前 `SafetyPointGoal1-v0` 在 SafeDreamer `safetygymcoor` 配置中 `repeat=5`，一个完整 episode 约为 200 个 policy step。脚本默认用 `--episode-length 200`，并自动计算 `steps = episodes * episode_length + step_margin`，避免只跑半个 episode 后没有 CSV。
@@ -275,10 +330,20 @@ python scripts/run_safedreamer_attack_suite.py --episodes 3 --force
 套件输出：
 
 ```text
-results/2026-06-14-safedreamer-attacks/all_episodes.csv
-results/2026-06-14-safedreamer-attacks/summary.csv
-results/2026-06-14-safedreamer-attacks/failures.csv  # only if a condition fails
+results/safedreamer-attack-runs/<YYYYMMDD-HHMMSS>/all_episodes.csv
+results/safedreamer-attack-runs/<YYYYMMDD-HHMMSS>/summary.csv
+results/safedreamer-attack-runs/<YYYYMMDD-HHMMSS>/failures.csv  # only if a condition fails
 ```
+
+## 最近实验结果分析
+
+最近一轮完整攻击测试位于 `results/safedreamer-attack-runs/20260616-112213/`。详细结果解释、算法原理和合理性分析见：
+
+```text
+docs/safedreamer_attack_results_20260616.md
+```
+
+核心结论：clean 条件下 SafeDreamer 的 `true_cost=0`；`hazard_blind` 和 `lidar_blind` 将 violation rate 提高到 1.0，说明当前世界模型策略对安全相关观测缺失非常敏感。
 
 训练并评估 PPO 辅助参照：
 

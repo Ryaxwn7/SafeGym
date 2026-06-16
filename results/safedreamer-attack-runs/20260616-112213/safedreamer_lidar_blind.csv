@@ -1,0 +1,6 @@
+condition,episode,step,return,cost,true_cost,exposed_cost,steps,violated
+safedreamer_lidar_blind,0,1005,11.702251806855202,204.0,204.0,204.0,200,1
+safedreamer_lidar_blind,1,2010,10.14062188553362,113.0,113.0,113.0,200,1
+safedreamer_lidar_blind,2,3015,12.873208067641826,22.0,22.0,22.0,200,1
+safedreamer_lidar_blind,3,4020,12.14088726544287,39.0,39.0,39.0,200,1
+safedreamer_lidar_blind,4,5025,8.991630060721945,23.0,23.0,23.0,200,1

@@ -1,5 +1,6 @@
 import argparse
 import datetime as dt
+import json
 import subprocess
 import sys
 import time
@@ -22,6 +23,10 @@ CONDITIONS = [
 
 def now():
     return dt.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+
+
+def timestamp():
+    return dt.datetime.now().strftime('%Y%m%d-%H%M%S')
 
 
 def log(message, condition='suite'):
@@ -143,10 +148,15 @@ def run_condition(args, spec, index, total):
     log_path = outdir / condition / 'run.log'
     log(f'[{index}/{total}] start attack={spec["attack"]}', condition)
 
-    if out_csv.exists() and out_csv.stat().st_size > 0 and not args.force:
+    if out_csv.exists() and out_csv.stat().st_size > 0 and args.resume and not args.force:
         log(f'skip existing CSV: {out_csv}', condition)
         validate_csv(out_csv, condition, args.episode_length, args.allow_short_episodes)
         return out_csv
+    if out_csv.exists() and out_csv.stat().st_size > 0 and not args.force:
+        raise RuntimeError(
+            f'{condition}: CSV already exists at {out_csv}. '
+            'Use --resume to skip completed conditions, --force to overwrite, '
+            'or omit --outdir to create a new timestamped run directory.')
 
     eval_cmd = build_eval_cmd(args, spec)
     if args.dry_run:
@@ -211,9 +221,48 @@ def write_failures(failures, outdir):
     log(f'failures: {path}')
 
 
+def resolve_outdir(args):
+    if args.outdir:
+        return Path(args.outdir)
+    run_id = args.run_id or timestamp()
+    return Path(args.base_outdir) / run_id
+
+
+def write_run_metadata(args, selected, outdir):
+    metadata = {
+        'created_at': now(),
+        'outdir': str(outdir),
+        'steps': args.steps,
+        'episodes': args.episodes,
+        'episode_length': args.episode_length,
+        'step_margin': args.step_margin,
+        'seed': args.seed,
+        'resume': args.resume,
+        'force': args.force,
+        'conditions': selected,
+    }
+    path = Path(outdir) / 'run_metadata.json'
+    path.write_text(json.dumps(metadata, indent=2), encoding='utf-8')
+    log(f'metadata: {path}')
+
+
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--outdir', default='results/2026-06-14-safedreamer-attacks')
+    parser.add_argument(
+        '--base-outdir',
+        default='results/safedreamer-attack-runs',
+        help='Base directory for timestamped runs when --outdir is not provided.',
+    )
+    parser.add_argument(
+        '--run-id',
+        default=None,
+        help='Run folder name under --base-outdir. Defaults to current timestamp.',
+    )
+    parser.add_argument(
+        '--outdir',
+        default=None,
+        help='Explicit output directory. If omitted, a timestamped directory is created.',
+    )
     parser.add_argument(
         '--steps',
         type=int,
@@ -241,6 +290,7 @@ def main():
     parser.add_argument('--seed', type=int, default=0)
     parser.add_argument('--retries', type=int, default=1)
     parser.add_argument('--retry-sleep', type=float, default=5.0)
+    parser.add_argument('--resume', action='store_true', help='skip existing per-condition CSV files in --outdir')
     parser.add_argument('--force', action='store_true', help='rerun conditions even if CSV exists')
     parser.add_argument('--continue-on-error', action='store_true')
     parser.add_argument(
@@ -273,9 +323,12 @@ def main():
         if missing:
             raise SystemExit(f'Unknown conditions: {sorted(missing)}')
 
+    args.outdir = str(resolve_outdir(args))
     Path(args.outdir).mkdir(parents=True, exist_ok=True)
     log(f'outdir={args.outdir}')
     log(f'steps={args.steps} seed={args.seed} conditions={len(selected)}')
+    if not args.dry_run:
+        write_run_metadata(args, selected, args.outdir)
 
     csv_paths = []
     failures = []

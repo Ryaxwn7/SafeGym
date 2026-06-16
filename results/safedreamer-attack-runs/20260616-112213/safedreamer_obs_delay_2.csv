@@ -1,0 +1,6 @@
+condition,episode,step,return,cost,true_cost,exposed_cost,steps,violated
+safedreamer_obs_delay_2,0,1005,-0.26943449559621513,0.0,0.0,0.0,200,0
+safedreamer_obs_delay_2,1,2010,19.069349785349914,41.0,41.0,41.0,200,1
+safedreamer_obs_delay_2,2,3015,9.687252349889604,0.0,0.0,0.0,200,0
+safedreamer_obs_delay_2,3,4020,20.139775797491893,14.0,14.0,14.0,200,1
+safedreamer_obs_delay_2,4,5025,16.598558405181393,29.0,29.0,29.0,200,1

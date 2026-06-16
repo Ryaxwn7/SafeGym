@@ -32,6 +32,11 @@ def main():
     parser.add_argument('--attack-seed', type=int, default=0)
     parser.add_argument('--fast-eval', action='store_true')
     parser.add_argument(
+        '--save-video',
+        action='store_true',
+        help='With --fast-eval, save groundtruth policy video but skip expensive model report.',
+    )
+    parser.add_argument(
         '--checkpoint',
         default=(
             'external/checkpoints/safedreamer_osrp_vector/safedreamer_osrp_vector/'
@@ -47,6 +52,8 @@ def main():
     env.setdefault('MPLCONFIGDIR', '/tmp/matplotlib-safedreamer')
     if args.fast_eval:
         env['SAFEDREAMER_FAST_EVAL'] = '1'
+    if args.save_video:
+        env['SAFEDREAMER_SAVE_FAST_VIDEO'] = '1'
 
     cmd = [
         'conda',

@@ -1,0 +1,5 @@
+{"step": 1005, "episode/length": 200.0, "episode/score": 11.702251806855202, "episode/cost": 204.0, "episode/true_cost": 204.0, "episode/exposed_cost": 204.0}
+{"step": 2010, "episode/length": 200.0, "episode/score": 10.14062188553362, "episode/cost": 113.0, "episode/true_cost": 113.0, "episode/exposed_cost": 113.0}
+{"step": 3015, "episode/length": 200.0, "episode/score": 12.873208067641826, "episode/cost": 22.0, "episode/true_cost": 22.0, "episode/exposed_cost": 22.0}
+{"step": 4020, "episode/length": 200.0, "episode/score": 12.14088726544287, "episode/cost": 39.0, "episode/true_cost": 39.0, "episode/exposed_cost": 39.0}
+{"step": 5025, "episode/length": 200.0, "episode/score": 8.991630060721945, "episode/cost": 23.0, "episode/true_cost": 23.0, "episode/exposed_cost": 23.0}

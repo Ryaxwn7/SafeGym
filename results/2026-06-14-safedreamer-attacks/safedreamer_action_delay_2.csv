@@ -1,0 +1,2 @@
+condition,episode,step,return,cost,true_cost,exposed_cost,steps,violated
+safedreamer_action_delay_2,0,1005,-0.693467050237814,0.0,0.0,0.0,200,0

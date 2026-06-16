@@ -51,6 +51,7 @@ def eval_only(agent, env, logger, args, lag):
   logdir = embodied.Path(args.logdir)
   logdir.mkdirs()
   fast_eval = os.environ.get('SAFEDREAMER_FAST_EVAL', '0') == '1'
+  save_fast_video = os.environ.get('SAFEDREAMER_SAVE_FAST_VIDEO', '0') == '1'
   print('Logdir', logdir)
   should_log = embodied.when.Clock(args.log_every)
   step = logger.step
@@ -150,10 +151,10 @@ def eval_only(agent, env, logger, args, lag):
     for key, value in ep.items():
       ep_expend[key] = np.expand_dims(value, 0)
 
-    if fast_eval:
+    if fast_eval and not save_fast_video:
       return
 
-    model_report = agent.report_eval(ep_expend)
+    model_report = {} if fast_eval else agent.report_eval(ep_expend)
 
 
     if 'image_orignal' in ep.keys():
