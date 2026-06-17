@@ -258,6 +258,39 @@ results/safedreamer-replays/<condition>/<timestamp>_name_safetygymcoor_SafetyPoi
 
 `--save-video` 会保存真实环境第三视角执行视频，并跳过昂贵的 model report。不要在完整 attack suite 中默认开视频，否则会生成大量 mp4 文件。
 
+批量录制所有 SafeDreamer 攻击条件的视频：
+
+```bash
+python scripts/record_safedreamer_attack_videos.py --episodes 1 --continue-on-error
+```
+
+脚本默认会给每次录制创建一个新的时间戳目录：
+
+```text
+results/safedreamer-video-runs/<YYYYMMDD-HHMMSS>/
+```
+
+每个条件的视频保存在对应条件子目录下，并汇总到：
+
+```text
+results/safedreamer-video-runs/<YYYYMMDD-HHMMSS>/video_manifest.csv
+```
+
+如只录制部分条件：
+
+```bash
+python scripts/record_safedreamer_attack_videos.py \
+  --only safedreamer_clean safedreamer_hazard_blind
+```
+
+如果需要避免只录到第一个 episode 的偶然失败轨迹，可以为某个条件录制多个 episode：
+
+```bash
+python scripts/record_safedreamer_attack_videos.py \
+  --only safedreamer_clean \
+  --episodes 5
+```
+
 运行完整 SafeDreamer 攻击测试套件：
 
 ```bash
@@ -333,6 +366,40 @@ python scripts/run_safedreamer_attack_suite.py \
 results/safedreamer-attack-runs/<YYYYMMDD-HHMMSS>/all_episodes.csv
 results/safedreamer-attack-runs/<YYYYMMDD-HHMMSS>/summary.csv
 results/safedreamer-attack-runs/<YYYYMMDD-HHMMSS>/failures.csv  # only if a condition fails
+```
+
+## Costlimit=25 Checkpoint 一键测试
+
+用户重新训练的 `costlimit=25` SafeDreamer checkpoint 默认放在：
+
+```text
+external/checkpoints/safedreamer_osrp_vector/safedreamer_osrp_vector/checkpoint.ckpt
+```
+
+一键运行全部攻击评估、与旧 checkpoint 结果对比，并录制每个条件的视频：
+
+```bash
+python scripts/run_costlimit25_checkpoint_test.py \
+  --episodes 5 \
+  --continue-on-error
+```
+
+如果只想先确认脚本和 checkpoint 能跑通，用一个 clean episode 做 smoke test：
+
+```bash
+python scripts/run_costlimit25_checkpoint_test.py \
+  --episodes 1 \
+  --only safedreamer_clean \
+  --skip-videos
+```
+
+脚本每次都会创建新的时间戳目录，不会跳过或覆盖旧结果。主要输出包括：
+
+```text
+results/safedreamer-attack-runs/costlimit25-<timestamp>/summary.csv
+results/safedreamer-video-runs/costlimit25-<timestamp>/video_manifest.csv
+results/costlimit25-full-runs/costlimit25-<timestamp>/comparison_vs_previous.csv
+results/costlimit25-full-runs/costlimit25-<timestamp>/comparison_vs_previous.md
 ```
 
 ## 最近实验结果分析

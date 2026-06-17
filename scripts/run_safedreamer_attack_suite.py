@@ -83,6 +83,8 @@ def build_eval_cmd(args, spec):
         str(args.seed),
         '--fast-eval',
     ]
+    if args.checkpoint:
+        cmd += ['--checkpoint', args.checkpoint]
     for key in [
         'attack_strength',
         'obs_noise_std',
@@ -239,6 +241,7 @@ def write_run_metadata(args, selected, outdir):
         'seed': args.seed,
         'resume': args.resume,
         'force': args.force,
+        'checkpoint': args.checkpoint,
         'conditions': selected,
     }
     path = Path(outdir) / 'run_metadata.json'
@@ -288,6 +291,7 @@ def main():
         help='Extra eval steps to ensure the final episode is emitted.',
     )
     parser.add_argument('--seed', type=int, default=0)
+    parser.add_argument('--checkpoint', default=None, help='Optional SafeDreamer checkpoint override.')
     parser.add_argument('--retries', type=int, default=1)
     parser.add_argument('--retry-sleep', type=float, default=5.0)
     parser.add_argument('--resume', action='store_true', help='skip existing per-condition CSV files in --outdir')

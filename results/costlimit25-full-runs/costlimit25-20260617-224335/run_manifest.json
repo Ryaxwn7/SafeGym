@@ -1,0 +1,17 @@
+{
+  "created_at": "2026-06-17 22:43:35",
+  "run_id": "costlimit25-20260617-224335",
+  "checkpoint": "external/checkpoints/safedreamer_osrp_vector/safedreamer_osrp_vector/checkpoint.ckpt",
+  "baseline_summary": "results/safedreamer-attack-runs/20260616-112213/summary.csv",
+  "episodes": 1,
+  "episode_length": 200,
+  "step_margin": 50,
+  "seed": 0,
+  "eval_dir": "results/safedreamer-attack-runs/costlimit25-20260617-224335",
+  "video_dir": "results/safedreamer-video-runs/costlimit25-20260617-224335",
+  "comparison_csv": "results/costlimit25-full-runs/costlimit25-20260617-224335/comparison_vs_previous.csv",
+  "comparison_md": "results/costlimit25-full-runs/costlimit25-20260617-224335/comparison_vs_previous.md",
+  "only": [
+    "safedreamer_clean"
+  ]
+}

@@ -1,0 +1,52 @@
+{
+  "created_at": "2026-06-17 22:53:46",
+  "outdir": "results/safedreamer-attack-runs/costlimit25-20260617-225346",
+  "steps": 1050,
+  "episodes": 5,
+  "episode_length": 200,
+  "step_margin": 50,
+  "seed": 0,
+  "resume": false,
+  "force": false,
+  "checkpoint": "external/checkpoints/safedreamer_osrp_vector/safedreamer_osrp_vector/checkpoint.ckpt",
+  "conditions": [
+    {
+      "condition": "safedreamer_clean",
+      "attack": "none"
+    },
+    {
+      "condition": "safedreamer_hazard_blind",
+      "attack": "hazard_blind"
+    },
+    {
+      "condition": "safedreamer_lidar_blind",
+      "attack": "lidar_blind",
+      "attack_strength": 8
+    },
+    {
+      "condition": "safedreamer_obs_noise_0.1",
+      "attack": "obs_noise",
+      "obs_noise_std": 0.1
+    },
+    {
+      "condition": "safedreamer_obs_delay_2",
+      "attack": "obs_delay",
+      "obs_delay": 2
+    },
+    {
+      "condition": "safedreamer_cost_under",
+      "attack": "cost_under",
+      "cost_scale": 0.25
+    },
+    {
+      "condition": "safedreamer_action_noise_0.1",
+      "attack": "action_noise",
+      "action_noise_std": 0.1
+    },
+    {
+      "condition": "safedreamer_action_delay_2",
+      "attack": "action_delay",
+      "action_delay": 2
+    }
+  ]
+}
